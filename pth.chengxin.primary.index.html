@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>誠信小先鋒：誠信大挑戰</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <style>
+        body { font-family: 'Microsoft JhengHei', sans-serif; background: linear-gradient(180deg, #87CEEB 0%, #E0F6FF 100%); margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        #game-container { background: white; border-radius: 40px; padding: 30px; box-shadow: 0 15px 30px rgba(0,0,0,0.15); max-width: 700px; width: 100%; text-align: center; border: 8px solid #FFD700; position: relative; }
+        .badge { background: #FF8C00; color: white; padding: 5px 15px; border-radius: 20px; font-weight: bold; margin-bottom: 10px; display: inline-block; }
+        h1 { color: #2E8B57; font-size: 28px; margin: 10px 0; }
+        #progress-container { margin: 15px 0; }
+        #progress-text { font-size: 18px; color: #555; font-weight: bold; margin-bottom: 5px; }
+        #progress-bar { height: 15px; background: #eee; border-radius: 10px; overflow: hidden; border: 2px solid #ddd; }
+        #progress-inner { height: 100%; background: #4CAF50; width: 0%; transition: 0.5s; }
+        #question-box { background: #F9F9F9; padding: 20px; border-radius: 20px; font-size: 22px; margin-bottom: 20px; min-height: 60px; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .option-btn { background: white; border: 3px solid #4CAF50; color: #333; padding: 15px; margin: 10px 0; border-radius: 20px; font-size: 18px; cursor: pointer; width: 100%; transition: 0.2s; font-weight: bold; }
+        .option-btn:hover { background: #E8F5E9; transform: scale(1.02); }
+        .char-img { width: 160px; height: auto; margin: 10px; border-radius: 15px; }
+        .star { font-size: 40px; color: #FFD700; text-shadow: 2px 2px #DAA520; }
+        .certificate { border: 10px double #FFD700; padding: 25px; background: #FFFDF0; border-radius: 20px; box-shadow: inset 0 0 50px rgba(255,215,0,0.1); }
+        .cert-footer { display: flex; justify-content: center; align-items: center; gap: 30px; margin-top: 20px; }
+        .nav-btn { background: #FF8C00; color: white; border: none; padding: 15px 30px; border-radius: 30px; font-size: 20px; cursor: pointer; margin: 10px; font-weight: bold; box-shadow: 0 4px #E67E22; }
+        .login-input { padding: 15px; font-size: 20px; border-radius: 15px; border: 3px solid #4CAF50; margin: 20px; width: 70%; text-align: center; }
+        .audio-icon { cursor: pointer; font-size: 24px; background: #FFB6C1; border: none; border-radius: 50%; width: 50px; height: 50px; margin-bottom: 10px; box-shadow: 0 4px #FF69B4; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="start-screen">
+        <h1 style="font-size: 36px;">🌈 誠信小先鋒</h1>
+        <p style="font-size: 20px;">歡迎來到挑戰賽！請輸入班別：</p>
+        <input type="text" id="user-class" class="login-input" placeholder="例如：1A / 2C"><br>
+        <button class="nav-btn" onclick="startGame()">開始挑戰</button>
+    </div>
+
+    <div id="game-main" style="display:none;">
+        <div id="level-tag" class="badge">第一關：故事大搜查</div>
+        <h1>✨ 誠實與誠信大挑戰 ✨</h1>
+        <div id="progress-container">
+            <div id="progress-text">第 1 / 10 題</div>
+            <div id="progress-bar"><div id="progress-inner"></div></div>
+        </div>
+        <div id="game-content">
+            <button class="audio-icon" onclick="readFull()">🔊</button>
+            <div id="question-box"></div>
+            <div id="options-area"></div>
+            <div id="feedback"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const synth = window.speechSynthesis;
+    let userClass = "";
+    let currentIdx = 0, isSecondStage = false;
+    
+    // 掌聲音效網址
+    const applause = new Audio('https://www.soundjay.com/human/sounds/applause-01.mp3');
+
+    // 題庫 (20題)
+    const questions = [
+        // 第一關 (10題)
+        { lvl: "第一關：故事大搜查", q: "誠實的樵夫阿財把什麼東西掉進湖裡了？", o: ["金斧頭", "鐵斧頭", "銀斧頭"], a: 1 },
+        { lvl: "第一關", q: "誰從湖水裡浮上來幫助阿財？", o: ["湖中女神", "龍王爺爺", "美人魚"], a: 0 },
+        { lvl: "第一關", q: "女神第一次拿出的金斧頭，阿財怎麼說？", o: ["這就是我的", "這不是我的", "不知道"], a: 1 },
+        { lvl: "第一關", q: "阿財一共拒絕了幾把不屬於自己的斧頭？", o: ["一把", "兩把", "三把"], a: 1 },
+        { lvl: "第一關", q: "女神最後為什麼要把三把斧頭都送給阿財？", o: ["阿財很窮", "阿財很誠實", "女神很大方"], a: 1 },
+        { lvl: "第一關", q: "貪心的阿貪為什麼要去湖邊？", o: ["想去游泳", "想騙走金斧頭", "想洗衣服"], a: 1 },
+        { lvl: "第一關", q: "阿貪看到金斧頭時，是怎麼回答的？", o: ["這就是我的", "這不是我的", "不知道"], a: 0 },
+        { lvl: "第一關", q: "阿貪一共想要幾把斧頭？", o: ["一把", "兩把", "三把都要"], a: 2 },
+        { lvl: "第一關", q: "女神對說謊的阿貪感到怎麼樣？", o: ["很開心", "很失望", "很佩服"], a: 1 },
+        { lvl: "第一關", q: "阿貪最後得到了什麼？", o: ["金斧頭", "鐵斧頭", "什麼都沒有"], a: 2 },
+        // 第二關 (10題)
+        { lvl: "第二關：誠信小主人", q: "如果不小心打破東西沒人看見，我應該：", o: ["勇敢認錯", "假裝不知道", "說是小貓弄的"], a: 0 },
+        { lvl: "第二關", q: "答應同學下午三點見，我應該：", o: ["睡過頭不去", "準時到達", "明天再去"], a: 1 },
+        { lvl: "第二關", q: "考試遇到不會的題目，我應該：", o: ["偷看別人的", "自己努力想", "藏書看答案"], a: 1 },
+        { lvl: "第二關", q: "撿到別人的錢包，應該交給：", o: ["警察或老師", "自己留著用", "藏起來"], a: 0 },
+        { lvl: "第二關", q: "發現店員多找了你錢，你應該：", o: ["馬上還給店員", "趕快跑掉", "買糖果吃"], a: 0 },
+        { lvl: "第二關", q: "作業沒寫完，老師問起時，我應該：", o: ["騙老師說忘了", "誠實說明並補做", "說是同學弄丟"], a: 1 },
+        { lvl: "第二關", q: "玩遊戲輸了，我應該：", o: ["承認輸了，下次再努力", "賴皮不認輸，發脾氣", "害怕，放棄不玩"], a: 0 },
+        { lvl: "第二關", q: "看到朋友做錯事撒謊，我應該：", o: ["幫他撒謊", "裝作沒看見", "勸他勇敢認錯"], a: 2 },
+        { lvl: "第二關", q: "「誠信」是形容一個人：", o: ["很有錢", "誠實，守信用", "跑得很快"], a: 1 },
+        { lvl: "第二關", q: "誠實的孩子，心裡會感覺：", o: ["很害怕", "踏實又愉快", "很後悔"], a: 1 }
+    ];
+
+    function startGame() {
+        userClass = document.getElementById('user-class').value;
+        if (!userClass) { alert("請輸入你的班別喔！"); return; }
+        document.getElementById('start-screen').style.display = 'none';
+        document.getElementById('game-main').style.display = 'block';
+        loadQ();
+    }
+
+function speak(text) {
+        if (synth.speaking) synth.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        
+        // 1. 設定語言為普通話 (中國大陸或台灣標準)
+        u.lang = 'zh-CN'; 
+        
+        // 2. 進階：從系統語音清單中強制尋找普通話發音人
+        const voices = synth.getVoices();
+        const mandarinVoice = voices.find(v => v.lang === 'zh-CN' || v.lang === 'zh-ST' || v.lang.includes('Mandarin'));
+        if (mandarinVoice) {
+            u.voice = mandarinVoice;
+        }
+
+        u.rate = 0.9; // 稍微放慢語速，讓學生聽得更清楚
+        synth.speak(u);
+    }
+
+    function loadQ() {
+        const data = questions[currentIdx];
+        document.getElementById('level-tag').innerText = data.lvl;
+        document.getElementById('question-box').innerText = data.q;
+        
+        const currentInStage = isSecondStage ? currentIdx - 9 : currentIdx + 1;
+        document.getElementById('progress-text').innerText = `第 ${currentInStage} / 10 題`;
+        document.getElementById('progress-inner').style.width = (currentInStage / 10) * 100 + "%";
+        
+        const area = document.getElementById('options-area');
+        area.innerHTML = "";
+        data.o.forEach((opt, i) => {
+            const b = document.createElement('button');
+            b.className = 'option-btn';
+            b.innerText = opt;
+            b.onclick = () => check(i, b);
+            area.appendChild(b);
+        });
+        document.getElementById('feedback').innerHTML = "";
+    }
+
+    function check(choice, btn) {
+        if (choice === questions[currentIdx].a) {
+            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            speak("答對了，你真棒！");
+            currentIdx++;
+            if (currentIdx === 10 && !isSecondStage) showLunaReward();
+            else if (currentIdx === 20) showNovaReward();
+            else loadQ();
+        } else {
+            speak("再想一想，加油！");
+            btn.style.borderColor = "red";
+        }
+    }
+
+    function showLunaReward() {
+        document.getElementById('progress-container').style.display = 'none';
+        speak("恭喜你完成第一關！獲得一顆星星！Luna 為你鼓掌！");
+        document.getElementById('game-content').innerHTML = `
+            <div class="star">★</div>
+            <img src="3D_LUNA.png" class="char-img">
+            <h2>恭喜獲得「誠信星星」！</h2>
+            <p>${userClass} 班的同學，你表現得太出色了！</p>
+            <button class="nav-btn" onclick="location.reload()">再做一次</button>
+            <button class="nav-btn" style="background:#2E8B57" onclick="startStageTwo()">挑戰第二關</button>
+        `;
+    }
+
+    function startStageTwo() {
+        isSecondStage = true;
+        currentIdx = 10;
+        document.getElementById('progress-container').style.display = 'block';
+        document.getElementById('game-content').innerHTML = `<button class="audio-icon" onclick="readFull()">🔊</button><div id="question-box"></div><div id="options-area"></div><div id="feedback"></div>`;
+        loadQ();
+    }
+
+    function showNovaReward() {
+        document.getElementById('progress-container').style.display = 'none';
+        speak("一百分！你太厲害了！快領取你的誠信好孩子獎狀吧！");
+        confetti({ particleCount: 300, spread: 100 });
+        document.getElementById('game-content').innerHTML = `
+            <div class="star">★★</div>
+            <img src="3D_NOVA.png" class="char-img">
+            <h2 style="color:#FF8C00">達成卓越成就！</h2>
+            <p>Nova 說：你已經是誠信小達人了！</p>
+            <button class="nav-btn" onclick="showDiploma()">獲得「誠信好孩子」獎狀</button>
+        `;
+    }
+
+    function showDiploma() {
+        applause.play(); // 頒獎時播放掌聲
+        document.getElementById('game-content').innerHTML = `
+            <div class="certificate">
+                <h1 style="color:#DAA520; font-size: 32px;">📜 誠信好孩子獎狀 📜</h1>
+                <hr style="border: 1px solid #FFD700; width: 80%;">
+                <p style="font-size:22px; margin: 20px 0;">茲證明</p>
+                <h2 style="font-size:32px; color:#2E8B57; border-bottom: 2px solid #333; display:inline-block; padding: 0 20px;">
+                    ${userClass} 班的同學
+                </h2>
+                <p style="font-size:20px; line-height: 1.6;">
+                    在「金斧頭與銀斧頭」誠信大挑戰中<br>
+                    表現傑出，榮獲滿分，特發此狀以資鼓勵！
+                </p>
+                <div class="cert-footer">
+                    <div><img src="3D_LUNA.png" style="width:110px;"><br><b>Luna</b></div>
+                    <div class="star">★★</div>
+                    <div><img src="3D_NOVA.png" style="width:110px;"><br><b>Nova</b></div>
+                </div>
+            </div>
+            <button class="nav-btn" onclick="location.reload()">回首頁</button>
+        `;
+        speak("恭喜獲得誠信好孩子獎狀！你是最棒的！");
+    }
+
+    function readFull() {
+        const data = questions[currentIdx];
+        speak(data.q + "。選項一：" + data.o[0] + "。選項二：" + data.o[1] + "。選項三：" + data.o[2]);
+    }
+</script>
+
+</body>
+</html>
