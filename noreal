@@ -94,11 +94,21 @@
         loadQ();
     }
 
-    function speak(text) {
+function speak(text) {
         if (synth.speaking) synth.cancel();
         const u = new SpeechSynthesisUtterance(text);
-        u.lang = 'zh-CN';
-        u.rate = 1;
+        
+        // 1. 設定語言為普通話 (中國大陸或台灣標準)
+        u.lang = 'zh-CN'; 
+        
+        // 2. 進階：從系統語音清單中強制尋找普通話發音人
+        const voices = synth.getVoices();
+        const mandarinVoice = voices.find(v => v.lang === 'zh-CN' || v.lang === 'zh-ST' || v.lang.includes('Mandarin'));
+        if (mandarinVoice) {
+            u.voice = mandarinVoice;
+        }
+
+        u.rate = 0.9; // 稍微放慢語速，讓學生聽得更清楚
         synth.speak(u);
     }
 
